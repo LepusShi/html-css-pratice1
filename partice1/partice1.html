@@ -1,0 +1,167 @@
+<!DOCTYPE html> <!-- 声明文档类型为HTML5 -->
+<html lang="en"> <!-- 设置HTML文档的语言为英语 -->
+<head>
+    <meta charset="UTF-8"> <!-- 设置字符编码为UTF-8，确保网页可以正确显示各种字符 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- 设置视口，使页面适应不同设备的屏幕宽度，初始缩放比例为1.0 -->
+    <title>Document</title> <!-- 设置文档的标题，显示在浏览器的标签页上 -->
+    <link href="css/main.css" rel="stylesheet" type="text/css"/> <!-- 引入外部CSS文件，用于定义网页的样式 -->
+    <link href="images/pighead.png" rel="icon" type="image/png"> <!-- 设置网页的图标，显示在浏览器的标签页上 -->
+</head>
+<body>
+    <header>
+        <section>
+            <div id="form">
+                <label for="title">ToDoList</label> <!-- 标签，关联输入框，点击标签时会自动聚焦到关联的输入框 -->
+                <input type="text" id="title" placeholder="添加ToDo" /> <!-- 文本输入框，用于输入待办事项，placeholder属性设置输入框的默认提示文本 -->
+            </div>
+        </section>
+    </header>
+    <section>
+        <h2>正在进行 <span id="todocount">0</span></h2> <!-- 显示正在进行的待办事项数量，span标签用于包裹文本，使其可以单独设置样式 -->
+        <ol id="todolist" class="demo-box"></ol> <!-- 有序列表，显示正在进行的待办事项，id属性用于标识元素，class属性用于设置样式 -->
+        <h2>已经完成 <span id="donecount">0</span></h2> <!-- 显示已完成的待办事项数量 -->
+        <ul id="donelist"></ul> <!-- 无序列表，显示已完成的待办事项 -->
+    </section>
+    <footer>Copyright © 2014 todolist.cn <a href="#">clear</a></footer> <!-- 页脚，包含版权信息和清除按钮，a标签用于创建超链接 -->
+    <img src="images/coffeebaby.png" alt="Coffee baby?" style="width: 800px; height: auto;">
+
+<script>
+var title, todolist, donelist, todocount, donecount, prev; // 声明变量，用于存储DOM元素和临时数据
+var list = {
+    todolist: [], // 存储正在进行的待办事项，数组用于存储多个待办事项
+    donelist: [], // 存储已完成的待办事项，数组用于存储多个待办事项
+};
+init(); // 调用init函数进行初始化
+
+// 初始化函数，设置DOM元素引用并添加事件监听器
+function init() {
+    title = document.querySelector("#title"); // 获取id为title的元素，querySelector方法用于选择匹配CSS选择器的第一个元素
+    todolist = document.querySelector("#todolist"); // 获取id为todolist的元素
+    donelist = document.querySelector("#donelist"); // 获取id为donelist的元素
+    todocount = document.querySelector("#todocount"); // 获取id为todocount的元素
+    donecount = document.querySelector("#donecount"); // 获取id为donecount的元素
+    footer = document.querySelector("footer"); // 获取footer标签的第一个元素
+    footer.addEventListener("click", clickHandler); // 为footer元素添加点击事件监听器，当点击时调用clickHandler函数
+    document.addEventListener("keyup", keyHandler); // 为document对象添加键盘按键事件监听器，当按键释放时调用keyHandler函数
+    todolist.addEventListener("change", changeHandler); // 为todolist元素添加更改事件监听器，当元素的值改变时调用changeHandler函数
+    todolist.addEventListener("click", clickHandler); // 为todolist元素添加点击事件监听器，当点击时调用clickHandler函数
+    todolist.addEventListener("dblclick", dblClickHandler); // 为todolist元素添加双击事件监听器，当双击时调用dblClickHandler函数
+    todolist.addEventListener("focusout", blurHandler); // 为todolist元素添加失焦事件监听器，当元素失去焦点时调用blurHandler函数
+
+    donelist.addEventListener("change", changeHandler); // 为donelist元素添加更改事件监听器，当元素的值改变时调用changeHandler函数
+    donelist.addEventListener("click", clickHandler); // 为donelist元素添加点击事件监听器，当点击时调用clickHandler函数
+
+    // 初始化渲染
+    // 如果在localStorage中找到上次保存的信息直接进行初始化渲染
+    if (localStorage.list) {
+        list = JSON.parse(localStorage.list); // 从localStorage中读取数据并解析为JSON对象，localStorage用于在浏览器中存储数据
+        render(); // 调用render函数进行渲染
+    }
+}
+
+// 渲染函数，根据list对象更新DOM内容
+function render() {
+    todolist.innerHTML = ""; // 清空todolist元素的内容，innerHTML属性用于设置或获取元素的HTML内容
+    donelist.innerHTML = ""; // 清空donelist元素的内容
+    list.todolist.forEach(function (item, index) { // 遍历todolist数组，forEach方法用于遍历数组中的每个元素
+        var li = document.createElement("li"); // 创建一个新的li元素，createElement方法用于创建新的HTML元素
+        li.innerHTML = `
+            <input type="checkbox" /> <!-- 复选框，用于标记是否完成 -->
+            <p>${item}</p> <!-- 显示待办事项内容，${item}用于插入变量的值 -->
+            <a href="#">X</a> <!-- 删除按钮，a标签用于创建超链接 -->
+        `;
+        todolist.appendChild(li); // 将li元素添加到todolist元素中，appendChild方法用于将子节点添加到父节点的末尾
+    });
+    list.donelist.forEach(function (item, index) { // 遍历donelist数组
+        var li = document.createElement("li"); // 创建一个新的li元素
+        li.innerHTML = `
+            <input type="checkbox" checked /> <!-- 复选框，已选中状态 -->
+            <p>${item}</p> <!-- 显示待办事项内容 -->
+            <a href="#">X</a> <!-- 删除按钮 -->
+        `;
+        donelist.appendChild(li); // 将li元素添加到donelist元素中
+    });
+    todocount.innerHTML = list.todolist.length; // 更新todocount元素的内容，显示正在进行的待办事项数量
+    donecount.innerHTML = list.donelist.length; // 更新donecount元素的内容，显示已完成的待办事项数量
+}
+
+// 键盘按键事件处理函数，当按下回车键时添加新的待办事项
+function keyHandler(e) {
+    if (e.keyCode !== 13) return; // 如果按下的不是回车键（keyCode为13），直接返回
+    if (title.value === "") return; // 如果输入框为空，直接返回
+    list.todolist.push(title.value); // 将输入框内容添加到todolist数组中，push方法用于向数组末尾添加一个或多个元素
+    title.value = ""; // 清空输入框的内容
+    render(); // 调用render函数进行渲染
+}
+
+// 更改事件处理函数，当复选框状态改变时更新待办事项列表
+function changeHandler(e) {
+    if (e.target.nodeName !== "INPUT") return; // 如果事件目标不是复选框（nodeName属性用于获取元素的标签名），直接返回
+    if (e.target.parentElement.nodeName === "LI") {
+        switchList(e.target, e.target.checked, false); // 调用switchList函数处理复选框状态变化，checked属性用于获取或设置复选框的状态
+    }
+}
+
+// 点击事件处理函数，当点击删除按钮或清除按钮时更新待办事项列表
+function clickHandler(e) {
+    if (e.target.nodeName !== "A") return; // 如果事件目标不是删除按钮（a标签），直接返回
+    if (e.target.parentElement.nodeName === "LI") {
+        switchList(
+            e.target,
+            !e.target.parentElement.firstElementChild.checked, // 取反复选框状态，firstElementChild属性用于获取元素的第一个子元素
+            true
+        ); // 调用switchList函数处理删除操作
+    } else {
+        // 如果点击的A标签不是li中的A标签而是footer中的A标签
+        // 则清空list中todolist和donelist然后重绘，实现一键清空
+        list.todolist.length = 0; // 清空todolist数组
+        list.donelist.length = 0; // 清空donelist数组
+        console.log(list); // 输出当前list状态，console.log用于在控制台输出信息
+        render(); // 调用render函数进行渲染
+    }
+}
+
+// 双击事件处理函数，当双击待办事项内容时将其转换为可编辑的输入框
+function dblClickHandler(e) {
+    if (e.target.nodeName !== "P") return; // 如果事件目标不是待办事项内容（p标签），直接返回
+    prev = e.target; // 保存当前待办事项内容元素
+    var input = document.createElement("input"); // 创建一个新的输入框元素
+    input.value = e.target.innerHTML; // 设置输入框的值为当前待办事项内容
+    input.style.width = e.target.offsetWidth + "px"; // 设置输入框的宽度与待办事项内容相同，offsetWidth属性用于获取元素的布局宽度
+    input.style.height = e.target.offsetHeight + "px"; // 设置输入框的高度与待办事项内容相同，offsetHeight属性用于获取元素的布局高度
+    input.style.lineHeight = e.target.offsetHeight + "px"; // 设置输入框的行高与待办事项内容相同
+    input.style.textIndent = e.target.style.textIndent; // 设置输入框的文本缩进与待办事项内容相同
+    input.style.fontSize = e.target.style.fontSize; // 设置输入框的字体大小与待办事项内容相同
+    e.target.parentNode.insertBefore(input, e.target); // 将输入框插入到待办事项内容之前，insertBefore方法用于在指定位置插入子节点
+    e.target.style.display = "none"; // 隐藏待办事项内容，display属性用于设置元素的显示方式
+    input.focus(); // 设置输入框为焦点，focus方法用于设置元素获得焦点
+}
+
+// 失焦事件处理函数，当输入框失去焦点时将其转换回待办事项内容
+function blurHandler(e) {
+    if (e.target.nodeName !== "INPUT") return; // 如果事件目标不是输入框，直接返回
+    var p = document.createElement("p"); // 创建一个新的段落元素
+    p.innerHTML = e.target.value; // 设置段落的值为输入框的内容
+    p.style.width = e.target.offsetWidth + "px"; // 设置段落的宽度与输入框相同
+    p.style.height = e.target.offsetHeight + "px"; // 设置段落的高度与输入框相同
+    p.style.lineHeight = e.target.offsetHeight + "px"; // 设置段落的行高与输入框相同
+    p.style.textIndent = e.target.style.textIndent; // 设置段落的文本缩进与输入框相同
+    p.style.fontSize = e.target.style.fontSize; // 设置段落的字体大小与输入框相同
+    e.target.parentNode.insertBefore(p, e.target); // 将段落插入到输入框之前
+    e.target.style.display = "none"; // 隐藏输入框
+    prev.innerHTML = e.target.value; // 更新待办事项内容
+    render(); // 调用render函数进行渲染
+}
+
+// 切换列表函数，根据复选框状态将待办事项在todolist和donelist之间切换
+function switchList(target, checked, isClick) {
+    var li = target.parentElement; // 获取目标元素的父元素li
+    var item = li.querySelector("p").innerHTML; // 获取待办事项内容
+    if (checked) {
+        list.donelist.push(item); // 如果复选框选中，将待办事项添加到donelist数组中
+    } else {
+        list.todolist.push(item); // 如果复选框未选中，将待办事项添加到todolist数组中
+    }
+    li.remove(); // 移除当前li元素，remove方法用于从DOM中移除元素
+    render(); // 调用render函数进行渲染
+}
